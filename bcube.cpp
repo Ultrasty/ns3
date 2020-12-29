@@ -68,53 +68,41 @@ main(int argc, char* argv[])
 	cmd.AddValue("n", "Number of servers per rack", n);
 	cmd.Parse(argc, argv);
 	int k = 2;			//BCube level，为了控制变量这里是三层
-	int num_sw = pow(n, k);		//number of switch at each level (all levels have same number of switch) = n^k;
-	int num_host = num_sw * n;	//total number of host
+	int num_sw = pow(n, k);		//每层的交换机数量 = n^k;
+	int num_host = num_sw * n;	//全部的主机数量
 	char filename[] = "statistics/BCube";
 	char traceFile[] = "statistics/BCube";
 	char buf[4];
 	std::sprintf(buf, "-%d", k);
 	strcat(filename, buf);
-	strcat(filename, ".xml");// filename for Flow Monitor xml output file
+	strcat(filename, ".xml");// Flow Monitor xml output file
 	strcat(traceFile, buf);
-	strcat(traceFile, ".tr");// filename for Flow Monitor xml output file
-// Initialize other variables
-//
+	strcat(traceFile, ".tr");// for Flow Monitor xml output file
 	int i = 0;
 	int j = 0;
 	int temp = 0;
 
-	// Define variables for On/Off Application
-	// These values will be used to serve the purpose that addresses of server and client are selected randomly
-	// Note: the format of host's address is 10.pod.switch.(host+2)
-	//
-	int levelRand = 0;	//	
+	int levelRand = 0;
 	int swRand = 0;		// Random values for servers' address
-	int hostRand = 0;	//
+	int hostRand = 0;
 
 	int randHost = 0;	// Random values for clients' address
 
-// Initialize parameters for On/Off application
-//
-	int port = 9;
-	int packetSize = 1024;		// 1024 bytes
-	char dataRate_OnOff[] = "1Mbps";
-	char maxBytes[] = "0";		// unlimited
 
-// Initialize parameters for Csma protocol
-//
+	int port = 9;
+	int packetSize = 1024;	
+	char dataRate_OnOff[] = "1Mbps";
+	char maxBytes[] = "0";	
+
 	char dataRate[] = "1000Mbps";	// 1Gbps
 	int delay = 0.001;		// 0.001 ms
 
-// Output some useful information
-//	
+
 	std::cout << "Number of BCube level =  " << k + 1 << "\n";
 	std::cout << "Number of switch in each BCube level =  " << num_sw << "\n";
 	std::cout << "Number of host under each switch =  " << n << "\n";
 	std::cout << "Total number of host =  " << num_host << "\n";
 
-	// Initialize Internet Stack and Routing Protocols
-	//	
 	InternetStackHelper internet;
 	Ipv4NixVectorHelper nixRouting;
 	Ipv4StaticRoutingHelper staticRouting;
@@ -123,8 +111,8 @@ main(int argc, char* argv[])
 	list.Add(nixRouting, 10);
 	internet.SetRoutingHelper(list);
 
-	//=========== Creation of Node Containers ===========//
-	//
+	//创建Node Containers
+
 	NodeContainer host;				// NodeContainer for hosts;  				
 	host.Create(num_host);
 	internet.Install(host);
@@ -133,7 +121,7 @@ main(int argc, char* argv[])
 	swB0.Create(num_sw);
 	internet.Install(swB0);
 
-	NodeContainer bridgeB0;				// NodeContainer for B0 bridges
+	NodeContainer bridgeB0;			// NodeContainer for B0 bridges
 	bridgeB0.Create(num_sw);
 	internet.Install(bridgeB0);
 
@@ -141,7 +129,7 @@ main(int argc, char* argv[])
 	swB1.Create(num_sw);
 	internet.Install(swB1);
 
-	NodeContainer bridgeB1;				// NodeContainer for B1 bridges
+	NodeContainer bridgeB1;			// NodeContainer for B1 bridges
 	bridgeB1.Create(num_sw);
 	internet.Install(bridgeB1);
 
@@ -149,19 +137,16 @@ main(int argc, char* argv[])
 	swB2.Create(num_sw);
 	internet.Install(swB2);
 
-	NodeContainer bridgeB2;				// NodeContainer for B2 bridges
+	NodeContainer bridgeB2;			// NodeContainer for B2 bridges
 	bridgeB2.Create(num_sw);
 	internet.Install(bridgeB2);
 
 
-	//=========== Initialize settings for On/Off Application ===========//
-	//
 
-	// Generate traffics for the simulation
-	//
+	// 创建traceFile
 	ApplicationContainer app[num_host];
 	for (i = 0; i < num_host; i++) {
-		// Randomly select a server
+		// 随机选择服务器
 		levelRand = 0;
 		swRand = rand() % num_sw + 0;
 		hostRand = rand() % n + 0;
@@ -173,39 +158,38 @@ main(int argc, char* argv[])
 		OnOffHelper oo = OnOffHelper("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address(add), port))); // ip address of server
 		oo.SetAttribute("OnTime", StringValue("ns3::ExponentialRandomVariable[Mean=1.0|Bound=0.0]"));
 		oo.SetAttribute("OffTime", StringValue("ns3::ExponentialRandomVariable[Mean=1.0|Bound=0.0]"));
-		//oo.SetAttribute("OnTime",RandomVariableValue(ExponentialVariable(1)));  
-		//oo.SetAttribute("OffTime",RandomVariableValue(ExponentialVariable(1))); 
 		oo.SetAttribute("PacketSize", UintegerValue(packetSize));
 		oo.SetAttribute("DataRate", StringValue(dataRate_OnOff));
 		oo.SetAttribute("MaxBytes", StringValue(maxBytes));
 
-		// Randomly select a client
+		// 随机选择客户端
 		randHost = rand() % num_host + 0;
 		int temp = n * swRand + (hostRand - 2);
 		while (temp == randHost) {
 			randHost = rand() % num_host + 0;
 		}
-		// to make sure that client and server are different
+		// 确保服务器和客户端不同
 
-	// Install On/Off Application to the client
+		// Install On/Off Application to the client
+		// OnOffApplication根据OnOff模式为单个目的地生成流量。
 		NodeContainer onoff;
 		onoff.Add(host.Get(randHost));
 		app[i] = oo.Install(onoff);
 	}
 
 	std::cout << "Finished creating On/Off traffic" << "\n";
-	// Inintialize Address Helper
-	//	
+	// 初始化 Address Helper
+
 	Ipv4AddressHelper address;
 
-	// Initialize Csma helper
+	// 初始化 Csma helper
 	//
 	CsmaHelper csma;
 	csma.SetChannelAttribute("DataRate", StringValue(dataRate));
 	csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(delay)));
 
-	//=========== Connect BCube 0 switches to hosts ===========//
-	//	
+	// Connect BCube 0 switches to hosts
+
 	NetDeviceContainer hostSwDevices0[num_sw];
 	NetDeviceContainer bridgeDevices0[num_sw];
 	Ipv4InterfaceContainer ipContainer0[num_sw];
@@ -223,7 +207,7 @@ main(int argc, char* argv[])
 		}
 		BridgeHelper bHelper0;
 		bHelper0.Install(bridgeB0.Get(i), bridgeDevices0[i]);
-		//Assign address
+		//分配地址
 		char* subnet;
 		subnet = toString(10, 0, i, 0);
 		address.SetBase(subnet, "255.255.255.0");
@@ -231,8 +215,8 @@ main(int argc, char* argv[])
 	}
 	std::cout << "Fininshed BCube 0 connection" << "\n";
 
-	//=========== Connect BCube 1 switches to hosts ===========//
-	//
+	//Connect BCube 1 switches to hosts
+
 	NetDeviceContainer hostSwDevices1[num_sw];
 	NetDeviceContainer bridgeDevices1[num_sw];
 	Ipv4InterfaceContainer ipContainer1[num_sw];
@@ -275,7 +259,7 @@ main(int argc, char* argv[])
 	}
 	std::cout << "Fininshed BCube 1 connection" << "\n";
 
-	//=========== Connect BCube 2 switches to hosts ===========//
+	// Connect BCube 2 switches to hosts
 	//
 	NetDeviceContainer hostSwDevices2[num_sw];
 	NetDeviceContainer bridgeDevices2[num_sw];
@@ -313,7 +297,7 @@ main(int argc, char* argv[])
 		}
 		BridgeHelper bHelper2;
 		bHelper2.Install(bridgeB2.Get(i), bridgeDevices2[i]);
-		//Assign address
+		//分配地址
 		char* subnet;
 		subnet = toString(10, 2, i, 0);
 		address.SetBase(subnet, "255.255.255.0");
@@ -323,30 +307,26 @@ main(int argc, char* argv[])
 	std::cout << "Fininshed BCube 2 connection" << "\n";
 	std::cout << "------------- " << "\n";
 
-	//=========== Start the simulation ===========//
-	//
+	//开始模拟
 
-	std::cout << "Start Simulation.. " << "\n";
+
+	std::cout << "Start ... " << "\n";
 	for (i = 0; i < num_host; i++) {
 		app[i].Start(Seconds(0.0));
 		app[i].Stop(Seconds(100.0));
 	}
 	Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-	// Calculate Throughput using Flowmonitor
-	//
+	// 计算 Throughput
+
 	FlowMonitorHelper flowmon;
 	Ptr<FlowMonitor> monitor = flowmon.InstallAll();
-	// Run simulation.
-	//
+	// Run simulation
+
 
 	//生成traceFile，生成的traceFile很大，有1.4个G
 	//AsciiTraceHelper ascii;
 	//csma.EnableAsciiAll(ascii.CreateFileStream(traceFile));
 
-
-#ifdef NEED_ANIMATION
-	//  Yet to write
-#endif
 
 	NS_LOG_INFO("Run Simulation.");
 	Simulator::Stop(Seconds(101.0));
@@ -376,24 +356,12 @@ main(int argc, char* argv[])
 		timesForwarded += iter->second.timesForwarded;
 		averageDelay += iter->second.delaySum.GetNanoSeconds() / iter->second.rxPackets;
 		throughput += iter->second.rxBytes * 8.0 / (iter->second.timeLastRxPacket.GetSeconds() - iter->second.timeFirstTxPacket.GetSeconds()) / 1024;
-		/*	  Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (iter->first);
-			  NS_LOG_UNCOND("Flow ID: " << iter->first << " Src Addr " << t.sourceAddress << " Dst Addr " << t.destinationAddress);
-				  NS_LOG_UNCOND("Tx Packets = " << iter->second.txPackets);
-				  NS_LOG_UNCOND("Rx Packets = " << iter->second.rxPackets);
-				  NS_LOG_UNCOND("DelaySum = " << iter->second.delaySum);
-				  NS_LOG_UNCOND("JitterSum = " << iter->second.jitterSum);
-				  NS_LOG_UNCOND("LastDelay = " << iter->second.lastDelay);
-				  NS_LOG_UNCOND("Lost Packets = " << iter->second.lostPackets);
-				  NS_LOG_UNCOND("timesForwarded = " << iter->second.timesForwarded);
-				  NS_LOG_UNCOND("Average Delay = " << iter->second.delaySum/iter->second.rxPackets);
-				  NS_LOG_UNCOND("Throughput: " << iter->second.rxBytes * 8.0 / (iter->second.timeLastRxPacket.GetSeconds()-iter->second.timeFirstTxPacket.GetSeconds()) / 1024  << " Kbps"); */
 	}
 
 #ifdef EXPORT_STATS
 	sfile << "HyScale" << "," << n << "," << nFlows << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
 	sfile << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / nFlows << endl;
-	//sfile<<"HyScale"<<","<<"n"<<","<<"txPackets"<<","<<"rxPackets"<<","<<"delaySum"<<","<<"jitterSum"<<","<<"lastDelay";
-// 	sfile<<","<<"lostPackets"<<","<<"timesForwarded"<<","<<"averageDelay"<<","<<"throughput"<<endl;
+
 #endif
 	std::cout << "HyScale" << "," << "n" << "," << "txPackets" << "," << "rxPackets" << "," << "delaySum" << "," << "jitterSum" << "," << "lastDelay";
 	std::cout << "," << "lostPackets" << "," << "timesForwarded" << "," << "averageDelay" << "," << "throughput" << endl;
