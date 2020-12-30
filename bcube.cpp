@@ -3,6 +3,7 @@
 #include <string>
 #include <cassert>
 
+#include "ns3/netanim-module.h"
 #include "ns3/flow-monitor-module.h"
 #include "ns3/bridge-helper.h"
 #include "ns3/bridge-net-device.h"
@@ -183,7 +184,7 @@ main(int argc, char* argv[])
 	Ipv4AddressHelper address;
 
 	// ³õÊ¼»¯ Csma helper
-	//
+
 	CsmaHelper csma;
 	csma.SetChannelAttribute("DataRate", StringValue(dataRate));
 	csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(delay)));
@@ -328,8 +329,36 @@ main(int argc, char* argv[])
 	//csma.EnableAsciiAll(ascii.CreateFileStream(traceFile));
 
 
+
+
 	NS_LOG_INFO("Run Simulation.");
 	Simulator::Stop(Seconds(101.0));
+
+	//Êä³öxml
+	/*AnimationInterface anim("first.xml");
+	for (int i = 0; i < num_host; i++) {
+		anim.SetConstantPosition(host.Get(i), 2.0, i);
+	}*/
+	/*for (int i = 0; i < num_sw; i++) {
+		anim.SetConstantPosition(swB0.Get(i), 4.0, i);
+	}
+	for (int i = 0; i < num_sw; i++) {
+		anim.SetConstantPosition(bridgeB0.Get(i), 6.0, i);
+	}
+	for (int i = 0; i < num_sw; i++) {
+		anim.SetConstantPosition(swB1.Get(i), 8.0, i);
+	}
+	for (int i = 0; i < num_sw; i++) {
+		anim.SetConstantPosition(bridgeB1.Get(i), 10.0, i);
+	}
+	for (int i = 0; i < num_sw; i++) {
+		anim.SetConstantPosition(swB2.Get(i), 12.0, i);
+	}
+	for (int i = 0; i < num_sw; i++) {
+		anim.SetConstantPosition(bridgeB2.Get(i), 14.0, i);
+	}*/
+	//------------------//
+	//------------------//
 	Simulator::Run();
 
 	monitor->CheckForLostPackets();
@@ -355,18 +384,21 @@ main(int argc, char* argv[])
 		lastDelay += iter->second.lastDelay;
 		timesForwarded += iter->second.timesForwarded;
 		averageDelay += iter->second.delaySum.GetNanoSeconds() / iter->second.rxPackets;
-		throughput += iter->second.rxBytes * 8.0 / (iter->second.timeLastRxPacket.GetSeconds() - iter->second.timeFirstTxPacket.GetSeconds()) / 1024;
+		throughput += iter->second.rxBytes * 8.0 / 1024 /1024;
+		std::cout << nFlows<<"\n";
+		std::cout << iter->second.rxBytes << " " << iter->second.timeLastRxPacket.GetSeconds() <<" "<< iter->second.timeFirstTxPacket.GetSeconds()<<"\n";
+		std::cout <<"txPackets:"<< iter->second.txPackets<<" rxPackets:"<<iter->second.rxPackets<<"\n";
 	}
 
 #ifdef EXPORT_STATS
-	sfile << "HyScale" << "," << n << "," << nFlows << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
-	sfile << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / nFlows << endl;
+	sfile << "BCube" << "," << n << "," << nFlows << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
+	sfile << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / delaySum *1000000000 << endl;
 
 #endif
-	std::cout << "HyScale" << "," << "n" << "," << "txPackets" << "," << "rxPackets" << "," << "delaySum" << "," << "jitterSum" << "," << "lastDelay";
+	std::cout << "BCube" << "," << "n" << "," << "txPackets" << "," << "rxPackets" << "," << "delaySum" << "," << "jitterSum" << "," << "lastDelay";
 	std::cout << "," << "lostPackets" << "," << "timesForwarded" << "," << "averageDelay" << "," << "throughput" << endl;
-	std::cout << "HyScale" << "," << n << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
-	std::cout << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / nFlows << endl;
+	std::cout << "BCube" << "," << n << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
+	std::cout << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / delaySum *1000000000 << endl;
 	monitor->SerializeToXmlFile(filename, true, false);
 
 	std::cout << "Simulation finished " << "\n";

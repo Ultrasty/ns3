@@ -47,9 +47,7 @@ void process_mem_usage(double& vm_usage, double& resident_set)
 
 void printTime()
 {
-	time_t t;
-	time(&t);
-	std::cout << "\nCurrent time: " << ctime(&t) << "\n" << endl;
+	
 }
 
 char* toString(int a, int b, int c, int d) {
@@ -87,10 +85,10 @@ main(int argc, char* argv[])
 
 	int k;
 
-#ifdef EXPORT_STATS
+
 	ofstream sfile;
-	sfile.open("statistics/fat-tree-stats.csv", ios::out | ios::app);
-#endif
+	sfile.open("statistics/fat-stats.csv", ios::out | ios::app);
+
 	CommandLine cmd;
 	cmd.AddValue("k", "Number of ports per switch", k);
 	cmd.Parse(argc, argv);
@@ -209,7 +207,6 @@ main(int argc, char* argv[])
 		NodeContainer onoff;
 		onoff.Add(host[rand1][rand2].Get(rand3));
 		app[i] = oo.Install(onoff);
-		std::cout << "Data transfer from " << (hostRand - 2) << " to " << rand3 << "\n";
 	}
 	std::cout << "Finished creating On/Off traffic" << "\n";
 
@@ -322,7 +319,7 @@ main(int argc, char* argv[])
 #endif
 
 	Simulator::Run();
-	monitor->CheckForLostPackets();
+	monitor->CheckForLostPackets(); // Check right now for packets that appear to be lost.
 	Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
 	std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
 
@@ -334,25 +331,44 @@ main(int argc, char* argv[])
 	double averageDelay;
 	double throughput;
 	int nFlows = 0;
+	//累加器
 	for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator iter = stats.begin(); iter != stats.end(); ++iter)
 	{
 		nFlows++;
+		//传输的数据包总数
 		txPackets += iter->second.txPackets;
+		//接收到的数据包总数
 		rxPackets += iter->second.rxPackets;
+		//累加丢失的包
 		lostPackets += iter->second.lostPackets;
+		//总延时
 		delaySum += iter->second.delaySum;
+		//延迟抖动总和
 		jitterSum += iter->second.jitterSum;
+		//包含最后测量的数据包延迟，它的值用来测量数据包的延迟抖动
 		lastDelay += iter->second.lastDelay;
+		//包含一个数据包转发的次数
 		timesForwarded += iter->second.timesForwarded;
+		//每个流中数据包平均延迟，累加后除以nFlows获得全部数据包平均延迟
 		averageDelay += iter->second.delaySum.GetNanoSeconds() / iter->second.rxPackets;
-		throughput += iter->second.rxBytes * 8.0 / (iter->second.timeLastRxPacket.GetSeconds() - iter->second.timeFirstTxPacket.GetSeconds()) / 1024;
+		//累加吞吐量并把单位换算为Mbps
+		throughput += iter->second.rxBytes * 8.0 / 1024 / 1024;
 
 	}
 
-	std::cout << "Fat-Tree" << "," << "k" << "," << "txPackets" << "," << "rxPackets" << "," << "delaySum" << "," << "jitterSum" << "," << "lastDelay";
-	std::cout << "," << "lostPackets" << "," << "timesForwarded" << "," << "averageDelay" << "," << "throughput(Kbps)" << endl;
-	std::cout << "Fat-Tree" << "," << k << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
-	std::cout << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / nFlows << endl;
+	std::cout << "Fat-Tree" << "," <<"serverNumber"<<","<< "k" << "," << "txPackets" << "," << "rxPackets" << "," << "delaySum" << "," << "jitterSum" << "," 
+		<< "lastDelay";
+	std::cout << "," << "lostPackets" << "," << "timesForwarded" << "," << "averageDelay" << "," << "throughput(Mbps)" << endl;
+	std::cout << "Fat-Tree" << "," << k*k*k/4<<","<<k << "," << txPackets << "," << rxPackets << "," << delaySum << "," << jitterSum << "," << lastDelay;
+	std::cout << "," << lostPackets << "," << timesForwarded << "," << averageDelay / nFlows << "," << throughput / delaySum *1000000000 << endl;
+
+
+
+
+
+
+
+
 
 	printTime();
 	std::cout << "Simulation finished " << "\n";
